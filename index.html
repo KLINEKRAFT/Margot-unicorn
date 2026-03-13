@@ -400,6 +400,7 @@
     }
 
     function runSelfTests() {
+      assert(TILE === 32, 'Tile size should stay 32');
       assert(clamp(-1, 0, 5) === 0, 'Clamp low failed');
       assert(clamp(8, 0, 5) === 5, 'Clamp high failed');
       assert(clamp(3, 0, 5) === 3, 'Clamp middle failed');
@@ -622,14 +623,14 @@
       floor[0] = baseGround;
       for (let x = 1; x < width; x++) {
         let next = floor[x - 1];
-        if (rng() < 0.18) next += rng() < 0.5 ? -1 : 1;
+        if (rng() < 0.14) next += rng() < 0.5 ? -1 : 1;
         floor[x] = clamp(next, 9, 12);
       }
 
-      const pitCount = 2 + Math.floor(levelNumber / 2);
+      const pitCount = 2 + Math.floor(levelNumber / 3);
       for (let i = 0; i < pitCount; i++) {
-        const start = 10 + Math.floor(rng() * (width - 20));
-        const size = 1 + Math.floor(rng() * Math.min(1 + Math.floor(levelNumber / 4), 3));
+        const start = 12 + Math.floor(rng() * (width - 24));
+        const size = 1 + Math.floor(rng() * Math.min(1 + Math.floor(levelNumber / 5), 2));
         for (let j = 0; j < size; j++) floor[start + j] = -1;
       }
 
@@ -638,10 +639,10 @@
         for (let y = floor[x]; y < height; y++) solid[y][x] = 1;
       }
 
-      const platformCount = 8 + levelNumber;
+      const platformCount = 6 + levelNumber;
       for (let i = 0; i < platformCount; i++) {
         const pw = 2 + Math.floor(rng() * 3);
-        const x = 6 + Math.floor(rng() * (width - pw - 12));
+        const x = 8 + Math.floor(rng() * (width - pw - 16));
         let nearestGround = floor[x];
         if (nearestGround < 0) {
           for (let back = x - 1; back >= 0; back--) {
@@ -649,7 +650,7 @@
           }
           if (nearestGround < 0) nearestGround = baseGround;
         }
-        const y = clamp(nearestGround - (2 + Math.floor(rng() * 3)), 5, 9);
+        const y = clamp(nearestGround - (2 + Math.floor(rng() * 2)), 6, 9);
         for (let px = 0; px < pw; px++) solid[y][x + px] = 1;
       }
 
@@ -661,6 +662,53 @@
         gems: [],
         goal: { x: (width - 4) * TILE, y: 0, w: 20, h: 96 }
       };
+
+      function carveWalkablePath() {
+        let x = 2;
+        let currentY = clamp(findSurfaceY(level, 2), 9, 12);
+        while (x < width - 6) {
+          const segmentLen = 4 + Math.floor(rng() * 8);
+          const nextY = clamp(currentY + (rng() < 0.35 ? (rng() < 0.5 ? -1 : 1) : 0), 9, 12);
+
+          for (let sx = x; sx < Math.min(width - 4, x + segmentLen); sx++) {
+            for (let y = nextY; y < height; y++) solid[y][sx] = 1;
+          }
+
+          const gapChance = x > 10 && x < width - 18 ? 0.22 : 0.08;
+          if (rng() < gapChance) {
+            const gapWidth = 1 + Math.floor(rng() * 2);
+            const gapStart = Math.min(width - 8, x + segmentLen);
+            for (let gx = gapStart; gx < gapStart + gapWidth; gx++) {
+              for (let y = 0; y < height; y++) solid[y][gx] = 0;
+            }
+            x = gapStart + gapWidth;
+          } else {
+            x += segmentLen;
+          }
+
+          currentY = nextY;
+        }
+      }
+
+      function smoothColumns() {
+        for (let x = 2; x < width - 2; x++) {
+          const here = findSurfaceY(level, x);
+          const left = findSurfaceY(level, x - 1);
+          const right = findSurfaceY(level, x + 1);
+          if (here < 0 || left < 0 || right < 0) continue;
+
+          if (Math.abs(left - right) <= 1) {
+            const target = Math.round((left + right) / 2);
+            if (Math.abs(here - target) > 1) {
+              for (let y = 0; y < height; y++) solid[y][x] = 0;
+              for (let y = target; y < height; y++) solid[y][x] = 1;
+            }
+          }
+        }
+      }
+
+      carveWalkablePath();
+      smoothColumns();
 
       level.decorations = addDecorations(level, rng);
       level.gems = addGems(level, rng);
