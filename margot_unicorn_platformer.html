@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Margot Unicorn Adventure</title>
   <style>
+    @font-face {
+      font-family: 'ArcadeCustom';
+      src: url('8-bit-arcade-in.ttf') format('truetype');
+      font-display: swap;
+    }
     :root {
       --ui-bg: rgba(8, 14, 18, 0.75);
       --ui-border: rgba(255,255,255,0.12);
@@ -20,7 +25,7 @@
       height: 100%;
       overflow: hidden;
       background: #0f1a10;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'ArcadeCustom', Arial, Helvetica, sans-serif;
       color: var(--ui-text);
     }
 
@@ -313,6 +318,10 @@
       rock: 'rock.png',
       moss1: 'moss-1.png',
       moss2: 'moss-2.png',
+      diamond: 'diamond.png',
+      gem: 'gem.png',
+      gem2: 'gem_2.png',
+      gem3: 'gem_3.png',
       unicorn: 'margot_unicorn_run.png'
     };
 
@@ -500,7 +509,7 @@
             w: 18,
             h: 18,
             bob: rng() * Math.PI * 2,
-            type: rng() < 0.5 ? 'diamond' : 'gem',
+            type: ['diamond', 'gem', 'gem_2', 'gem_3'][Math.floor(rng() * 4)],
             collected: false
           });
         }
@@ -634,7 +643,7 @@
           gem.collected = true;
           game.levelCollected += 1;
           game.totalCollected += 1;
-          game.score += gem.type === 'diamond' ? 40 : 25;
+          game.score += gem.type === 'diamond' ? 40 : 25 + (gem.type === 'gem_3' ? 10 : gem.type === 'gem_2' ? 5 : 0);
           updateHud();
         }
       }
@@ -781,18 +790,16 @@
 
     function drawGemShape(x, y, type, t) {
       const bob = Math.sin(t * 0.005) * 2;
+      const spriteMap = {
+        diamond: img.diamond,
+        gem: img.gem,
+        gem_2: img.gem2,
+        gem_3: img.gem3
+      };
+      const sprite = spriteMap[type] || img.gem;
       ctx.save();
-      ctx.translate(x, y + bob);
-      ctx.fillStyle = type === 'diamond' ? '#83ffd9' : '#8fe85a';
-      ctx.beginPath();
-      ctx.moveTo(9, 0);
-      ctx.lineTo(18, 8);
-      ctx.lineTo(9, 18);
-      ctx.lineTo(0, 8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.45)';
-      ctx.fillRect(6, 3, 5, 3);
+      ctx.translate(Math.round(x), Math.round(y + bob));
+      ctx.drawImage(sprite, 0, 0, sprite.width, sprite.height, 0, 0, 18, 18);
       ctx.restore();
     }
 
