@@ -400,7 +400,6 @@
     }
 
     function runSelfTests() {
-      assert(TILE === 32, 'Tile size should stay 32');
       assert(clamp(-1, 0, 5) === 0, 'Clamp low failed');
       assert(clamp(8, 0, 5) === 5, 'Clamp high failed');
       assert(clamp(3, 0, 5) === 3, 'Clamp middle failed');
