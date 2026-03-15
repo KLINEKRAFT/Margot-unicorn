@@ -95,7 +95,7 @@
     .hidden { display: none; }
 
     .card {
-      width: min(820px, 94vw);
+      width: min(860px, 94vw);
       background: rgba(13, 19, 20, 0.93);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 22px;
@@ -175,18 +175,9 @@
       transition: transform 0.15s ease, opacity 0.15s ease;
     }
 
-    button:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    button.secondary {
-      background: #eff5e8;
-    }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.secondary { background: #eff5e8; }
 
     #mobileControls {
       position: absolute;
@@ -207,11 +198,11 @@
     }
 
     .touchBtn {
-      width: 74px;
-      height: 74px;
+      width: 82px;
+      height: 82px;
       border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.15);
-      background: rgba(15, 24, 18, 0.78);
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(15, 24, 18, 0.52);
       color: white;
       font-size: 28px;
       font-weight: 700;
@@ -223,11 +214,19 @@
       user-select: none;
       -webkit-user-select: none;
       touch-action: none;
+      overflow: hidden;
+      padding: 0;
     }
 
-    .touchBtn.wide {
-      width: 90px;
+    .touchBtn img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      image-rendering: pixelated;
+      pointer-events: none;
     }
+
+    .touchBtn.wide { width: 90px; }
 
     .collectBar {
       width: 180px;
@@ -271,12 +270,12 @@
     <div class="overlay" id="startOverlay">
       <div class="card">
         <h1>Margot Unicorn Adventure</h1>
-        <p class="sub">Run, jump, collect gems, and reach the flag. Ten forest levels, smoother movement, sparkle effects, sound, and a saved high score.</p>
+        <p class="sub">A cleaner Mario-style build with one tileset, smoother terrain, sparkle gems, sound effects, animated flag, parallax forest, and browser-saved high score.</p>
         <div class="controlsInfo">
           <div class="panel"><strong>Move</strong><br/>A / D or Arrow Keys</div>
-          <div class="panel"><strong>Jump</strong><br/>W, Up Arrow, or Space</div>
+          <div class="panel"><strong>Jump</strong><br/>W, Up Arrow, Space, or the up button</div>
           <div class="panel"><strong>Pause</strong><br/>P</div>
-          <div class="panel"><strong>Mobile</strong><br/>Use the on-screen buttons</div>
+          <div class="panel"><strong>Mobile</strong><br/>Use the attached D-pad buttons</div>
         </div>
         <div class="btnRow">
           <button id="startBtn" disabled>Loading Assets...</button>
@@ -298,11 +297,11 @@
 
     <div id="mobileControls">
       <div class="controlCluster">
-        <div class="touchBtn" data-key="left">◀</div>
-        <div class="touchBtn" data-key="right">▶</div>
+        <div class="touchBtn" data-key="left"><img src="btn_left.png" alt="Left"></div>
+        <div class="touchBtn" data-key="right"><img src="btn_right.png" alt="Right"></div>
       </div>
       <div class="controlCluster">
-        <div class="touchBtn wide" data-key="jump">▲</div>
+        <div class="touchBtn wide" data-key="jump"><img src="btn_jump.png" alt="Jump"></div>
       </div>
     </div>
   </div>
@@ -314,14 +313,34 @@
 
     const TILE = 48;
     const WORLD_HEIGHT_TILES = 16;
-    const GRAVITY = 1700;
+    const GRAVITY = 1800;
     const MOVE_SPEED = 330;
     const JUMP_POWER = 860;
     const MAX_FALL = 1200;
     const LEVEL_COUNT = 10;
     const SEED_BASE = 1017;
     const HIGH_SCORE_KEY = 'margot-unicorn-high-score';
-    const SOUND_ENABLED = true;
+    const TILE_COLUMNS = 6;
+
+    const TILE_ID = {
+      GRASS_LEFT: 0,
+      GRASS_MID: 1,
+      GRASS_RIGHT: 2,
+      GRASS_SINGLE: 3,
+      GRASS_CORNER: 4,
+      FILL: 5,
+      SLOPE_LEFT: 6,
+      SMALL_BLOCK: 7,
+      PLATFORM_LEGS: 8,
+      PLATFORM_LEGS_ALT: 9,
+      PLATFORM_RIGHT: 10,
+      BUSH: 11,
+      BUSH_ALT: 12,
+      GRASS_BLOCK: 13,
+      WATER: 14,
+      WATER_ALT: 15,
+      FLAG: 16
+    };
 
     const hud = {
       level: document.getElementById('levelText'),
@@ -346,21 +365,20 @@
       back: 'back.png',
       far: 'far.png',
       middle: 'middle.png',
-      tileset: 'tileset.png',
-      plant: 'plant.png',
-      rock: 'rock.png',
-      moss1: 'moss-1.png',
-      moss2: 'moss-2.png',
+      tiles: 'tiles.png',
       diamond: 'diamond.png',
       gem: 'gem.png',
       gem2: 'gem_2.png',
       gem3: 'gem_3.png',
-      unicorn: 'margot_unicorn_run.png'
+      unicorn: 'margot_unicorn_run.png',
+      btnLeft: 'btn_left.png',
+      btnRight: 'btn_right.png',
+      btnJump: 'btn_jump.png'
     };
 
-    const optionalImageKeys = new Set(['plant', 'rock', 'moss1', 'moss2', 'diamond', 'gem', 'gem2', 'gem3']);
-    const propImages = ['plant', 'rock', 'moss1', 'moss2'];
+    const optionalImageKeys = new Set(['diamond', 'gem', 'gem2', 'gem3', 'btnLeft', 'btnRight', 'btnJump']);
     const sparkleParticles = [];
+    const dustParticles = [];
 
     let audioCtx = null;
     let assetsLoaded = false;
@@ -400,14 +418,14 @@
     }
 
     function runSelfTests() {
+      assert(TILE >= 32, 'Tile size invalid');
       assert(clamp(-1, 0, 5) === 0, 'Clamp low failed');
       assert(clamp(8, 0, 5) === 5, 'Clamp high failed');
       assert(clamp(3, 0, 5) === 3, 'Clamp middle failed');
       const a = makeRng(5);
       const b = makeRng(5);
       assert(a() === b(), 'Seeded RNG must be deterministic');
-      assert(propImages.every((key) => key in imageFiles), 'Prop keys missing in image files');
-      assert(['diamond', 'gem', 'gem2', 'gem3', 'unicorn', 'tileset', 'back', 'far', 'middle'].every((key) => key in imageFiles), 'Missing required assets');
+      assert(['tiles', 'unicorn', 'back', 'far', 'middle'].every((key) => key in imageFiles), 'Missing required assets');
     }
 
     function getImage(key) {
@@ -452,7 +470,7 @@
     }
 
     function initAudio() {
-      if (!SOUND_ENABLED || audioCtx) return;
+      if (audioCtx) return;
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       audioCtx = new Ctx();
@@ -518,31 +536,27 @@
       btn.addEventListener('pointerleave', () => press(false));
     });
 
-    function getTileRect(index) {
-      const sheet = getImage('tileset');
-      const cols = Math.max(1, Math.floor(sheet.width / TILE));
+    function getTileRect(id) {
+      const sheet = getImage('tiles');
+      const cols = TILE_COLUMNS;
       return {
-        sx: (index % cols) * TILE,
-        sy: Math.floor(index / cols) * TILE,
+        sx: (id % cols) * TILE,
+        sy: Math.floor(id / cols) * TILE,
         sw: TILE,
         sh: TILE
       };
     }
 
-    const tileIndex = {
-      grass: 0,
-      grassRight: 1,
-      grassCenter: 2,
-      grassLeft: 3,
-      dirt: 4,
-      solo: 5,
-      cliffRight: 6,
-      cliffLeft: 7
-    };
+    function drawTile(id, dx, dy, dw = TILE, dh = TILE) {
+      const sheet = getImage('tiles');
+      if (!sheet) return;
+      const tr = getTileRect(id);
+      ctx.drawImage(sheet, tr.sx, tr.sy, tr.sw, tr.sh, dx, dy, dw, dh);
+    }
 
     function tileAt(level, tx, ty) {
       if (tx < 0 || ty < 0 || tx >= level.width || ty >= level.height) return 0;
-      return level.solid[ty][tx];
+      return level.map[ty][tx];
     }
 
     function rectVsLevel(level, x, y, w, h) {
@@ -560,162 +574,138 @@
 
     function findSurfaceY(level, x) {
       for (let y = 0; y < level.height; y++) {
-        if (level.solid[y][x]) return y;
+        if (level.map[y][x]) return y;
       }
       return -1;
-    }
-
-    function addDecorations(level, rng) {
-      const decorations = [];
-      for (let x = 2; x < level.width - 2; x++) {
-        const topY = findSurfaceY(level, x);
-        if (topY <= 0) continue;
-        if (tileAt(level, x, topY - 1)) continue;
-        if (rng() < 0.16) {
-          const prop = propImages[Math.floor(rng() * propImages.length)];
-          const image = getImage(prop);
-          if (!image) continue;
-          decorations.push({
-            image: prop,
-            x: x * TILE + Math.floor(rng() * 10 - 5),
-            y: topY * TILE - image.height + 10,
-            sway: rng() * Math.PI * 2
-          });
-        }
-      }
-      return decorations;
-    }
-
-    function addGems(level, rng) {
-      const gems = [];
-      for (let x = 5; x < level.width - 5; x++) {
-        const topY = findSurfaceY(level, x);
-        if (topY <= 0 || tileAt(level, x, topY - 1)) continue;
-        const nearGap = !tileAt(level, x - 1, topY) || !tileAt(level, x + 1, topY);
-        const chance = nearGap ? 0.3 : 0.12;
-        if (rng() < chance) {
-          const typePool = ['diamond', 'gem', 'gem2', 'gem3'];
-          const type = typePool[Math.floor(rng() * typePool.length)];
-          gems.push({
-            x: x * TILE + 7,
-            y: topY * TILE - (30 + Math.floor(rng() * 26)),
-            w: 18,
-            h: 18,
-            bob: rng() * Math.PI * 2,
-            sparkle: rng() * Math.PI * 2,
-            type,
-            collected: false
-          });
-        }
-      }
-      return gems;
     }
 
     function buildLevel(levelNumber) {
       const rng = makeRng(SEED_BASE + levelNumber * 999);
       const width = 72 + levelNumber * 8;
       const height = WORLD_HEIGHT_TILES;
-      const baseGround = 11;
-      const floor = new Array(width).fill(baseGround);
-      const solid = Array.from({ length: height }, () => Array(width).fill(0));
+      const map = Array.from({ length: height }, () => Array(width).fill(0));
+      const surface = new Array(width).fill(11);
 
-      floor[0] = baseGround;
-      for (let x = 1; x < width; x++) {
-        let next = floor[x - 1];
-        if (rng() < 0.14) next += rng() < 0.5 ? -1 : 1;
-        floor[x] = clamp(next, 9, 12);
+      let ground = 11;
+      for (let x = 0; x < width; x++) {
+        if (rng() < 0.15) ground += rng() < 0.5 ? -1 : 1;
+        ground = clamp(ground, 9, 12);
+        surface[x] = ground;
       }
 
       const pitCount = 2 + Math.floor(levelNumber / 3);
       for (let i = 0; i < pitCount; i++) {
         const start = 12 + Math.floor(rng() * (width - 24));
-        const size = 1 + Math.floor(rng() * Math.min(1 + Math.floor(levelNumber / 5), 2));
-        for (let j = 0; j < size; j++) floor[start + j] = -1;
+        const size = 1 + Math.floor(rng() * 2);
+        for (let j = 0; j < size; j++) surface[start + j] = -1;
       }
 
-      for (let x = 0; x < width; x++) {
-        if (floor[x] < 0) continue;
-        for (let y = floor[x]; y < height; y++) solid[y][x] = 1;
+      let x = 2;
+      let currentY = surface[2] > 0 ? surface[2] : 11;
+      while (x < width - 6) {
+        const segmentLen = 5 + Math.floor(rng() * 8);
+        const nextY = clamp(currentY + (rng() < 0.35 ? (rng() < 0.5 ? -1 : 1) : 0), 9, 12);
+        for (let sx = x; sx < Math.min(width - 4, x + segmentLen); sx++) {
+          if (surface[sx] < 0) continue;
+          surface[sx] = nextY;
+        }
+        const gapChance = x > 10 && x < width - 18 ? 0.20 : 0.06;
+        if (rng() < gapChance) {
+          const gapWidth = 1 + Math.floor(rng() * 2);
+          const gapStart = Math.min(width - 8, x + segmentLen);
+          for (let gx = gapStart; gx < gapStart + gapWidth; gx++) surface[gx] = -1;
+          x = gapStart + gapWidth;
+        } else {
+          x += segmentLen;
+        }
+        currentY = nextY;
+      }
+
+      for (let cx = 1; cx < width - 1; cx++) {
+        if (surface[cx] < 0 || surface[cx - 1] < 0 || surface[cx + 1] < 0) continue;
+        const target = Math.round((surface[cx - 1] + surface[cx + 1]) / 2);
+        if (Math.abs(surface[cx] - target) > 1) surface[cx] = target;
+      }
+
+      for (let tx = 0; tx < width; tx++) {
+        if (surface[tx] < 0) continue;
+        const topY = surface[tx];
+        const leftGap = tx === 0 || surface[tx - 1] < 0;
+        const rightGap = tx === width - 1 || surface[tx + 1] < 0;
+        for (let ty = topY; ty < height; ty++) {
+          if (ty === topY) {
+            if (leftGap && rightGap) map[ty][tx] = TILE_ID.GRASS_SINGLE;
+            else if (leftGap) map[ty][tx] = TILE_ID.GRASS_LEFT;
+            else if (rightGap) map[ty][tx] = TILE_ID.GRASS_RIGHT;
+            else map[ty][tx] = TILE_ID.GRASS_MID;
+          } else {
+            map[ty][tx] = TILE_ID.FILL;
+          }
+        }
       }
 
       const platformCount = 6 + levelNumber;
       for (let i = 0; i < platformCount; i++) {
         const pw = 2 + Math.floor(rng() * 3);
-        const x = 8 + Math.floor(rng() * (width - pw - 16));
-        let nearestGround = floor[x];
-        if (nearestGround < 0) {
-          for (let back = x - 1; back >= 0; back--) {
-            if (floor[back] >= 0) { nearestGround = floor[back]; break; }
-          }
-          if (nearestGround < 0) nearestGround = baseGround;
+        const px = 8 + Math.floor(rng() * (width - pw - 16));
+        let baseY = surface[px];
+        if (baseY < 0) baseY = 11;
+        const py = clamp(baseY - (2 + Math.floor(rng() * 2)), 5, 9);
+        for (let j = 0; j < pw; j++) {
+          map[py][px + j] = (j === 0) ? TILE_ID.GRASS_LEFT : (j === pw - 1 ? TILE_ID.GRASS_RIGHT : TILE_ID.GRASS_MID);
         }
-        const y = clamp(nearestGround - (2 + Math.floor(rng() * 2)), 6, 9);
-        for (let px = 0; px < pw; px++) solid[y][x + px] = 1;
       }
 
-      const level = {
+      const decorations = [];
+      for (let tx = 2; tx < width - 2; tx++) {
+        const topY = findSurfaceY({ map, width, height }, tx);
+        if (topY <= 0 || tileAt({ map, width, height }, tx, topY - 1)) continue;
+        if (rng() < 0.08) {
+          decorations.push({
+            tile: rng() < 0.5 ? TILE_ID.BUSH : TILE_ID.BUSH_ALT,
+            x: tx * TILE,
+            y: topY * TILE - TILE,
+            sway: rng() * Math.PI * 2
+          });
+        }
+      }
+
+      const gems = [];
+      for (let tx = 5; tx < width - 5; tx++) {
+        const topY = findSurfaceY({ map, width, height }, tx);
+        if (topY <= 0 || tileAt({ map, width, height }, tx, topY - 1)) continue;
+        const nearGap = !tileAt({ map, width, height }, tx - 1, topY) || !tileAt({ map, width, height }, tx + 1, topY);
+        if (rng() < (nearGap ? 0.28 : 0.12)) {
+          const typePool = ['diamond', 'gem', 'gem2', 'gem3'];
+          gems.push({
+            x: tx * TILE + 12,
+            y: topY * TILE - (34 + Math.floor(rng() * 26)),
+            w: 22,
+            h: 22,
+            bob: rng() * Math.PI * 2,
+            sparkle: rng() * Math.PI * 2,
+            type: typePool[Math.floor(rng() * typePool.length)],
+            collected: false
+          });
+        }
+      }
+
+      const goalColumn = width - 4;
+      let goalSurface = findSurfaceY({ map, width, height }, goalColumn);
+      if (goalSurface < 0) {
+        goalSurface = 11;
+        for (let ty = goalSurface; ty < height; ty++) map[ty][goalColumn] = ty === goalSurface ? TILE_ID.GRASS_SINGLE : TILE_ID.FILL;
+      }
+
+      return {
         width,
         height,
-        solid,
-        decorations: [],
-        gems: [],
-        goal: { x: (width - 4) * TILE, y: 0, w: 20, h: 96 }
+        map,
+        decorations,
+        gems,
+        goal: { x: goalColumn * TILE, y: Math.max(3, goalSurface - 2) * TILE, w: 24, h: TILE * 2 },
+        waterPits: surface.map((v, i) => v < 0 ? i : -1).filter((v) => v >= 0)
       };
-
-      function carveWalkablePath() {
-        let x = 2;
-        let currentY = clamp(findSurfaceY(level, 2), 9, 12);
-        while (x < width - 6) {
-          const segmentLen = 4 + Math.floor(rng() * 8);
-          const nextY = clamp(currentY + (rng() < 0.35 ? (rng() < 0.5 ? -1 : 1) : 0), 9, 12);
-
-          for (let sx = x; sx < Math.min(width - 4, x + segmentLen); sx++) {
-            for (let y = nextY; y < height; y++) solid[y][sx] = 1;
-          }
-
-          const gapChance = x > 10 && x < width - 18 ? 0.22 : 0.08;
-          if (rng() < gapChance) {
-            const gapWidth = 1 + Math.floor(rng() * 2);
-            const gapStart = Math.min(width - 8, x + segmentLen);
-            for (let gx = gapStart; gx < gapStart + gapWidth; gx++) {
-              for (let y = 0; y < height; y++) solid[y][gx] = 0;
-            }
-            x = gapStart + gapWidth;
-          } else {
-            x += segmentLen;
-          }
-
-          currentY = nextY;
-        }
-      }
-
-      function smoothColumns() {
-        for (let x = 2; x < width - 2; x++) {
-          const here = findSurfaceY(level, x);
-          const left = findSurfaceY(level, x - 1);
-          const right = findSurfaceY(level, x + 1);
-          if (here < 0 || left < 0 || right < 0) continue;
-
-          if (Math.abs(left - right) <= 1) {
-            const target = Math.round((left + right) / 2);
-            if (Math.abs(here - target) > 1) {
-              for (let y = 0; y < height; y++) solid[y][x] = 0;
-              for (let y = target; y < height; y++) solid[y][x] = 1;
-            }
-          }
-        }
-      }
-
-      carveWalkablePath();
-      smoothColumns();
-
-      level.decorations = addDecorations(level, rng);
-      level.gems = addGems(level, rng);
-
-      const goalCol = width - 4;
-      const goalSurface = findSurfaceY(level, goalCol);
-      level.goal.y = Math.max(3, goalSurface - 2) * TILE;
-      return level;
     }
 
     const player = {
@@ -730,7 +720,8 @@
       animTime: 0,
       frame: 0,
       visualX: 0,
-      visualY: 0
+      visualY: 0,
+      wasOnGround: false
     };
 
     const game = {
@@ -760,26 +751,43 @@
     function spawnSparkles(x, y, count = 7) {
       for (let i = 0; i < count; i++) {
         const angle = (Math.PI * 2 * i) / count;
+        const life = 0.45 + Math.random() * 0.2;
         sparkleParticles.push({
           x,
           y,
           vx: Math.cos(angle) * (40 + Math.random() * 40),
           vy: Math.sin(angle) * (40 + Math.random() * 40) - 20,
-          life: 0.45 + Math.random() * 0.2,
-          maxLife: 0.45 + Math.random() * 0.2,
+          life,
+          maxLife: life,
           size: 2 + Math.random() * 2
+        });
+      }
+    }
+
+    function spawnDust(x, y) {
+      for (let i = 0; i < 4; i++) {
+        const life = 0.22 + Math.random() * 0.12;
+        dustParticles.push({
+          x: x + Math.random() * 10 - 5,
+          y: y + Math.random() * 4,
+          vx: Math.random() * 30 - 15,
+          vy: -20 - Math.random() * 25,
+          life,
+          maxLife: life,
+          size: 4 + Math.random() * 3
         });
       }
     }
 
     function resetPlayer() {
       player.x = 3 * TILE;
-      player.y = 8 * TILE;
+      player.y = 6 * TILE;
       player.visualX = player.x;
       player.visualY = player.y;
       player.vx = 0;
       player.vy = 0;
       player.onGround = false;
+      player.wasOnGround = false;
       player.animTime = 0;
       player.frame = 0;
       game.cameraX = 0;
@@ -792,6 +800,7 @@
       game.levelCollected = 0;
       game.levelTotal = game.level.gems.length;
       sparkleParticles.length = 0;
+      dustParticles.length = 0;
       resetPlayer();
       hideMessage();
       updateHud();
@@ -847,7 +856,7 @@
       game.levelCollected += 1;
       game.totalCollected += 1;
       game.score += gem.type === 'diamond' ? 40 : gem.type === 'gem3' ? 35 : gem.type === 'gem2' ? 30 : 25;
-      spawnSparkles(gx + 9, gy + 9, 8);
+      spawnSparkles(gx + 11, gy + 11, 8);
       playGemSound();
       if (game.score > game.highScore) game.highScore = saveHighScore(game.score);
       updateHud();
@@ -855,7 +864,7 @@
 
     function checkGoal() {
       const goal = game.level.goal;
-      const overlap = player.x + player.w > goal.x && player.x < goal.x + goal.w + 24 && player.y + player.h > goal.y && player.y < goal.y + goal.h;
+      const overlap = player.x + player.w > goal.x && player.x < goal.x + goal.w + 30 && player.y + player.h > goal.y && player.y < goal.y + goal.h + 20;
       if (!overlap) return;
       playGoalSound();
       game.score += 250 + game.levelCollected * 25;
@@ -869,7 +878,7 @@
       }
     }
 
-    function updateSparkles(dt) {
+    function updateParticles(dt) {
       for (let i = sparkleParticles.length - 1; i >= 0; i--) {
         const p = sparkleParticles[i];
         p.life -= dt;
@@ -877,6 +886,14 @@
         p.y += p.vy * dt;
         p.vy += 100 * dt;
         if (p.life <= 0) sparkleParticles.splice(i, 1);
+      }
+      for (let i = dustParticles.length - 1; i >= 0; i--) {
+        const p = dustParticles[i];
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 70 * dt;
+        if (p.life <= 0) dustParticles.splice(i, 1);
       }
     }
 
@@ -927,6 +944,11 @@
         player.vy = 0;
       }
 
+      if (player.onGround && !player.wasOnGround) {
+        spawnDust(player.x + player.w * 0.5, player.y + player.h);
+      }
+      player.wasOnGround = player.onGround;
+
       if (player.y > game.level.height * TILE + 220) {
         loseLife();
         return;
@@ -934,7 +956,7 @@
 
       for (const gem of game.level.gems) {
         if (gem.collected) continue;
-        const gy = gem.y + Math.sin(now * 0.004 + gem.bob) * 4;
+        const gy = gem.y + Math.sin(now * 0.004 + gem.bob) * 6;
         if (player.x + player.w > gem.x && player.x < gem.x + gem.w && player.y + player.h > gy && player.y < gy + gem.h) {
           collectGem(gem, gem.x, gy);
         }
@@ -942,19 +964,14 @@
 
       checkGoal();
 
-      if (Math.abs(player.vx) > 1) {
-        player.animTime += dt * (player.onGround ? 13 : 8);
-      } else if (!player.onGround) {
-        player.animTime += dt * 6;
-      } else {
-        player.animTime = 0;
-      }
-
       if (!player.onGround) {
+        player.animTime += dt * 6;
         player.frame = player.vy < 0 ? 13 : 14;
       } else if (Math.abs(player.vx) > 1) {
+        player.animTime += dt * 13;
         player.frame = Math.floor(player.animTime) % 12;
       } else {
+        player.animTime = 0;
         player.frame = 0;
       }
 
@@ -985,30 +1002,9 @@
       gradient.addColorStop(1, '#355126');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
       drawLayer(getImage('back'), 0.05, 0.78, -24, 0.2);
       drawLayer(getImage('far'), 0.12, 0.98, -14, 1.3);
       drawLayer(getImage('middle'), 0.24, 1.18, 10, 2.1);
-    }
-
-    function chooseTile(level, x, y) {
-      const left = tileAt(level, x - 1, y);
-      const right = tileAt(level, x + 1, y);
-      const above = tileAt(level, x, y - 1);
-
-      if (!above) {
-        if (!left && !right) return tileIndex.solo;
-        if (!left) return tileIndex.cliffLeft;
-        if (!right) return tileIndex.cliffRight;
-        return tileIndex.grassCenter;
-      }
-
-      return tileIndex.dirt;
-    }
-
-    function drawTile(index, dx, dy) {
-      const tr = getTileRect(index);
-      ctx.drawImage(getImage('tileset'), tr.sx, tr.sy, tr.sw, tr.sh, dx, dy, TILE + 1, TILE + 1);
     }
 
     function drawLevel(now) {
@@ -1018,33 +1014,33 @@
 
       for (let y = 0; y < game.level.height; y++) {
         for (let x = startX; x < endX; x++) {
-          if (!game.level.solid[y][x]) continue;
-          const dx = Math.round(x * TILE - cam);
-          const dy = Math.round(y * TILE);
-          const tile = chooseTile(game.level, x, y);
-          drawTile(tile, dx, dy);
+          const id = game.level.map[y][x];
+          if (!id) continue;
+          drawTile(id, Math.round(x * TILE - cam), Math.round(y * TILE), TILE + 1, TILE + 1);
         }
       }
 
+      for (const wx of game.level.waterPits) {
+        const dx = Math.round(wx * TILE - cam);
+        const dy = Math.round((WORLD_HEIGHT_TILES - 2) * TILE);
+        const waveId = Math.sin(now * 0.01 + wx) > 0 ? TILE_ID.WATER : TILE_ID.WATER_ALT;
+        drawTile(waveId, dx, dy, TILE + 1, TILE + 1);
+      }
+
       for (const deco of game.level.decorations) {
-        const image = getImage(deco.image);
-        if (!image) continue;
-        const scale = 1.2;
-        const drawW = Math.round(image.width * scale);
-        const drawH = Math.round(image.height * scale);
         const dx = Math.round(deco.x - cam + Math.sin(now * 0.001 + deco.sway) * 1.2);
-        if (dx < -drawW || dx > canvas.width + drawW) continue;
-        ctx.drawImage(image, dx, Math.round(deco.y - (drawH - image.height)), drawW, drawH);
+        if (dx < -TILE || dx > canvas.width + TILE) continue;
+        drawTile(deco.tile, dx, Math.round(deco.y), TILE, TILE);
       }
     }
 
-    function drawGemSprite(sprite, x, y, scale = 18) {
+    function drawGemSprite(sprite, x, y, scale = 24) {
       if (sprite) {
         ctx.drawImage(sprite, 0, 0, sprite.width, sprite.height, x, y, scale, scale);
-        return;
+      } else {
+        ctx.fillStyle = '#d6fff3';
+        ctx.fillRect(x + 4, y + 2, 12, 12);
       }
-      ctx.fillStyle = '#d6fff3';
-      ctx.fillRect(x + 4, y + 2, 10, 10);
     }
 
     function drawCollectibles(now) {
@@ -1078,6 +1074,15 @@
         ctx.fillRect(Math.round(p.x - game.cameraVisualX), Math.round(p.y), p.size + 1, p.size + 1);
         ctx.restore();
       }
+
+      for (const p of dustParticles) {
+        const alpha = Math.max(0, p.life / p.maxLife);
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.7;
+        ctx.fillStyle = '#e7d09e';
+        ctx.fillRect(Math.round(p.x - game.cameraVisualX), Math.round(p.y), p.size, p.size * 0.6);
+        ctx.restore();
+      }
     }
 
     function drawGoal(now) {
@@ -1085,17 +1090,19 @@
       const poleX = Math.round(g.x - game.cameraVisualX + 12);
       const topY = g.y + 4;
       ctx.fillStyle = '#e9ff8f';
-      ctx.fillRect(poleX, topY, 6, g.h + 8);
-
+      ctx.fillRect(poleX, topY, 6, g.h + 12);
       const wave = Math.sin(now * 0.012) * 5;
-      ctx.fillStyle = '#fff4bd';
-      ctx.beginPath();
-      ctx.moveTo(poleX + 6, topY + 8);
-      ctx.lineTo(poleX + 42 + wave, topY + 18);
-      ctx.lineTo(poleX + 6, topY + 30);
-      ctx.closePath();
-      ctx.fill();
-
+      if (getImage('tiles')) {
+        drawTile(TILE_ID.FLAG, poleX + 6, topY + 6 + wave, TILE, TILE);
+      } else {
+        ctx.fillStyle = '#fff4bd';
+        ctx.beginPath();
+        ctx.moveTo(poleX + 6, topY + 8);
+        ctx.lineTo(poleX + 42 + wave, topY + 18);
+        ctx.lineTo(poleX + 6, topY + 30);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.fillStyle = '#d9ff63';
       ctx.fillRect(poleX - 8, topY + g.h + 8, 22, 6);
     }
@@ -1112,7 +1119,6 @@
       const col = safeFrame % cols;
       const drawX = Math.round(player.visualX - game.cameraVisualX - 18);
       const drawY = Math.round(player.visualY - 44);
-
       ctx.save();
       if (player.facing < 0) {
         ctx.translate(drawX + 60, 0);
@@ -1144,10 +1150,9 @@
     function loop(now) {
       const dt = Math.min(0.033, (now - last) / 1000 || 0);
       last = now;
-
       if (game.running && game.level) {
         updatePlayer(dt, now);
-        updateSparkles(dt);
+        updateParticles(dt);
         drawBackground();
         drawLevel(now);
         drawCollectibles(now);
@@ -1155,7 +1160,6 @@
         drawPlayer();
         if (game.paused && messageOverlay.classList.contains('hidden')) drawPauseOverlay();
       }
-
       requestAnimationFrame(loop);
     }
 
