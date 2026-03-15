@@ -3,7 +3,7 @@
 <head>
 
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <title>Margot's Unicorn Quest</title>
 
@@ -12,7 +12,8 @@
 body{
 margin:0;
 overflow:hidden;
-background:#000;
+background:black;
+font-family:monospace;
 }
 
 canvas{
@@ -34,8 +35,6 @@ const ctx=canvas.getContext("2d")
 canvas.width=window.innerWidth
 canvas.height=window.innerHeight
 
-const TILE=64
-
 const STATE={
 TITLE:0,
 PLAY:1,
@@ -51,25 +50,27 @@ let score=0
 let gems=0
 let lives=3
 
-let highScore=localStorage.getItem("unicornScore")||0
+let highScore=localStorage.getItem("unicornHighScore")||0
 
 function saveScore(){
-localStorage.setItem("unicornScore",score)
+localStorage.setItem("unicornHighScore",score)
 }
 
 function sound(freq){
 
 let ac=new AudioContext()
-let o=ac.createOscillator()
-let g=ac.createGain()
 
-o.connect(g)
-g.connect(ac.destination)
+let osc=ac.createOscillator()
+let gain=ac.createGain()
 
-o.frequency.value=freq
-o.start()
+osc.connect(gain)
+gain.connect(ac.destination)
 
-g.gain.exponentialRampToValueAtTime(
+osc.frequency.value=freq
+
+osc.start()
+
+gain.gain.exponentialRampToValueAtTime(
 0.0001,
 ac.currentTime+0.15
 )
@@ -83,22 +84,24 @@ const tiles=new Image()
 tiles.src="tiles.png"
 
 const back=new Image()
-back.src="forest_back.png"
+back.src="back.png"
 
-const mid=new Image()
-mid.src="forest_mid.png"
+const far=new Image()
+far.src="far.png"
 
-const front=new Image()
-front.src="forest_front.png"
+const middle=new Image()
+middle.src="middle.png"
+
+const title=new Image()
+title.src="title_screen.png"
 
 let player={
 x:200,
 y:300,
 vx:0,
 vy:0,
-w:80,
-h:80,
-frame:0
+w:90,
+h:90
 }
 
 let gravity=0.6
@@ -119,13 +122,6 @@ keys[e.key]=false
 
 })
 
-function togglePause(){
-
-if(state===STATE.PLAY)state=STATE.PAUSE
-else if(state===STATE.PAUSE)state=STATE.PLAY
-
-}
-
 canvas.addEventListener("click",()=>{
 
 if(state===STATE.TITLE){
@@ -136,6 +132,13 @@ sound(800)
 }
 
 })
+
+function togglePause(){
+
+if(state===STATE.PLAY)state=STATE.PAUSE
+else if(state===STATE.PAUSE)state=STATE.PLAY
+
+}
 
 let terrain=[]
 
@@ -160,7 +163,7 @@ let gemsList=[]
 for(let i=5;i<300;i+=12){
 
 gemsList.push({
-x:i*TILE,
+x:i*64,
 y:300,
 spark:Math.random()*10,
 collected:false
@@ -173,7 +176,7 @@ let enemies=[]
 for(let i=10;i<300;i+=20){
 
 enemies.push({
-x:i*TILE,
+x:i*64,
 y:420,
 dir:1
 })
@@ -200,7 +203,7 @@ player.vy+=gravity
 player.x+=player.vx
 player.y+=player.vy
 
-let ground=terrain[Math.floor(player.x/TILE)]
+let ground=terrain[Math.floor(player.x/64)]
 
 if(player.y>ground){
 
@@ -257,8 +260,8 @@ state=STATE.GAMEOVER
 function drawParallax(){
 
 ctx.drawImage(back,-cameraX*0.2,0)
-ctx.drawImage(mid,-cameraX*0.4,0)
-ctx.drawImage(front,-cameraX*0.6,0)
+ctx.drawImage(far,-cameraX*0.4,0)
+ctx.drawImage(middle,-cameraX*0.6,0)
 
 }
 
@@ -269,8 +272,8 @@ for(let i=0;i<terrain.length;i++){
 ctx.drawImage(
 tiles,
 0,0,64,64,
-i*TILE-cameraX,
-terrain[i]+TILE,
+i*64-cameraX,
+terrain[i]+64,
 64,64
 )
 
@@ -284,7 +287,7 @@ ctx.drawImage(
 unicorn,
 0,0,256,256,
 player.x-cameraX,
-player.y-80,
+player.y-90,
 120,
 120
 )
@@ -339,7 +342,7 @@ e.y,
 function drawHUD(){
 
 ctx.fillStyle="black"
-ctx.fillRect(20,20,240,120)
+ctx.fillRect(20,20,260,120)
 
 ctx.fillStyle="white"
 ctx.font="20px monospace"
@@ -348,29 +351,18 @@ ctx.fillText("Score:"+score,40,50)
 ctx.fillText("Gems:"+gems,40,80)
 ctx.fillText("Lives:"+lives,40,110)
 
+ctx.fillText("High:"+highScore,40,140)
+
 }
 
 function drawTitle(){
 
-ctx.fillStyle="black"
-ctx.fillRect(0,0,canvas.width,canvas.height)
-
-ctx.fillStyle="white"
-ctx.font="60px monospace"
-ctx.textAlign="center"
-
-ctx.fillText(
-"Margot's Unicorn Quest",
-canvas.width/2,
-canvas.height/2-60
-)
-
-ctx.font="30px monospace"
-
-ctx.fillText(
-"Click To Start",
-canvas.width/2,
-canvas.height/2+40
+ctx.drawImage(
+title,
+0,
+0,
+canvas.width,
+canvas.height
 )
 
 }
@@ -381,7 +373,6 @@ ctx.fillStyle="black"
 ctx.fillRect(0,0,canvas.width,canvas.height)
 
 ctx.fillStyle="white"
-
 ctx.font="50px monospace"
 ctx.textAlign="center"
 
