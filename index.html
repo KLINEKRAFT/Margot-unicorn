@@ -1,1185 +1,449 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Margot Unicorn Adventure</title>
-  <style>
-    @font-face {
-      font-family: 'ArcadeCustom';
-      src: url('8-bit-arcade-in.ttf') format('truetype');
-      font-display: swap;
-    }
 
-    :root {
-      --ui-bg: rgba(8, 14, 18, 0.82);
-      --ui-border: rgba(255,255,255,0.12);
-      --ui-text: #f4f8ef;
-      --accent: #d9ff63;
-      --danger: #ff9b9b;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-    * { box-sizing: border-box; }
+<title>Margot's Unicorn Quest</title>
 
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #0f1a10;
-      font-family: 'ArcadeCustom', Arial, Helvetica, sans-serif;
-      color: var(--ui-text);
-    }
+<style>
 
-    body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+body{
+margin:0;
+overflow:hidden;
+background:#000;
+}
 
-    #gameWrap {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background: #101710;
-    }
+canvas{
+image-rendering:pixelated;
+}
 
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      image-rendering: pixelated;
-      image-rendering: crisp-edges;
-      background: #152412;
-    }
+</style>
 
-    .hud {
-      position: absolute;
-      top: 16px;
-      left: 16px;
-      right: 16px;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      z-index: 20;
-      pointer-events: none;
-    }
-
-    .panel {
-      background: var(--ui-bg);
-      border: 1px solid var(--ui-border);
-      border-radius: 14px;
-      padding: 10px 14px;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
-    }
-
-    .leftHud {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 30;
-      background: linear-gradient(to bottom, rgba(8,18,12,0.55), rgba(5,10,10,0.72));
-      padding: 24px;
-    }
-
-    .hidden { display: none; }
-
-    .card {
-      width: min(860px, 94vw);
-      background: rgba(13, 19, 20, 0.93);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 22px;
-      padding: 28px;
-      box-shadow: 0 18px 50px rgba(0,0,0,0.4);
-      text-align: center;
-    }
-
-    h1, h2, p { margin: 0; }
-
-    h1 {
-      font-size: clamp(30px, 5vw, 58px);
-      letter-spacing: 0.02em;
-      margin-bottom: 14px;
-      line-height: 1.1;
-    }
-
-    h2 {
-      font-size: clamp(22px, 4vw, 38px);
-      margin-bottom: 12px;
-      line-height: 1.15;
-    }
-
-    .sub, .statusLine, .controlsInfo .panel {
-      font-family: Arial, Helvetica, sans-serif;
-    }
-
-    .sub {
-      font-size: clamp(14px, 2vw, 18px);
-      line-height: 1.5;
-      color: #d9e7cf;
-      margin-bottom: 20px;
-    }
-
-    .statusLine {
-      margin-top: 14px;
-      min-height: 20px;
-      color: #e8f2da;
-      font-size: 14px;
-    }
-
-    .statusLine.error {
-      color: var(--danger);
-    }
-
-    .controlsInfo {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
-      text-align: left;
-      margin: 20px 0 24px;
-    }
-
-    .controlsInfo .panel {
-      padding: 12px;
-      min-height: 72px;
-    }
-
-    .btnRow {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    button {
-      appearance: none;
-      border: 0;
-      border-radius: 999px;
-      padding: 14px 22px;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      color: #172114;
-      background: var(--accent);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-      transition: transform 0.15s ease, opacity 0.15s ease;
-    }
-
-    button:hover:not(:disabled) { transform: translateY(-1px); }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
-    button.secondary { background: #eff5e8; }
-
-    #mobileControls {
-      position: absolute;
-      left: 18px;
-      right: 18px;
-      bottom: 18px;
-      display: none;
-      justify-content: space-between;
-      align-items: end;
-      z-index: 25;
-      pointer-events: none;
-    }
-
-    .controlCluster {
-      display: flex;
-      gap: 12px;
-      pointer-events: auto;
-    }
-
-    .touchBtn {
-      width: 82px;
-      height: 82px;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(15, 24, 18, 0.52);
-      color: white;
-      font-size: 28px;
-      font-weight: 700;
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: none;
-      overflow: hidden;
-      padding: 0;
-    }
-
-    .touchBtn img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      image-rendering: pixelated;
-      pointer-events: none;
-    }
-
-    .touchBtn.wide { width: 90px; }
-
-    .collectBar {
-      width: 180px;
-      height: 10px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.12);
-      margin-top: 8px;
-    }
-
-    .collectFill {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(to right, #8fe85a, #f4ff88);
-    }
-
-    @media (max-width: 900px), (pointer: coarse) {
-      #mobileControls { display: flex; }
-      .hud { top: 12px; left: 12px; right: 12px; }
-      .panel { padding: 8px 12px; }
-    }
-  </style>
 </head>
 <body>
-  <div id="gameWrap">
-    <canvas id="game"></canvas>
-
-    <div class="hud">
-      <div class="leftHud">
-        <div class="panel" id="levelText">Level 1 / 10</div>
-        <div class="panel" id="scoreText">Score: 0</div>
-        <div class="panel" id="livesText">Lives: 3</div>
-        <div class="panel" id="highScoreText">High Score: 0</div>
-      </div>
-      <div class="panel">
-        <div id="gemsText">Gems: 0 / 0</div>
-        <div class="collectBar"><div class="collectFill" id="collectFill"></div></div>
-      </div>
-    </div>
-
-    <div class="overlay" id="startOverlay">
-      <div class="card">
-        <h1>Margot Unicorn Adventure</h1>
-        <p class="sub">A cleaner Mario-style build with one tileset, smoother terrain, sparkle gems, sound effects, animated flag, parallax forest, and browser-saved high score.</p>
-        <div class="controlsInfo">
-          <div class="panel"><strong>Move</strong><br/>A / D or Arrow Keys</div>
-          <div class="panel"><strong>Jump</strong><br/>W, Up Arrow, Space, or the up button</div>
-          <div class="panel"><strong>Pause</strong><br/>P</div>
-          <div class="panel"><strong>Mobile</strong><br/>Use the attached D-pad buttons</div>
-        </div>
-        <div class="btnRow">
-          <button id="startBtn" disabled>Loading Assets...</button>
-        </div>
-        <div class="statusLine" id="statusLine">Loading images...</div>
-      </div>
-    </div>
-
-    <div class="overlay hidden" id="messageOverlay">
-      <div class="card">
-        <h2 id="messageTitle">Level Complete</h2>
-        <p class="sub" id="messageBody"></p>
-        <div class="btnRow">
-          <button id="nextBtn">Continue</button>
-          <button class="secondary hidden" id="restartBtn">Play Again</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="mobileControls">
-      <div class="controlCluster">
-        <div class="touchBtn" data-key="left"><img src="btn_left.png" alt="Left"></div>
-        <div class="touchBtn" data-key="right"><img src="btn_right.png" alt="Right"></div>
-      </div>
-      <div class="controlCluster">
-        <div class="touchBtn wide" data-key="jump"><img src="btn_jump.png" alt="Jump"></div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-
-    const TILE = 48;
-    const WORLD_HEIGHT_TILES = 16;
-    const GRAVITY = 1800;
-    const MOVE_SPEED = 330;
-    const JUMP_POWER = 860;
-    const MAX_FALL = 1200;
-    const LEVEL_COUNT = 10;
-    const SEED_BASE = 1017;
-    const HIGH_SCORE_KEY = 'margot-unicorn-high-score';
-    const TILE_COLUMNS = 6;
-
-    const TILE_ID = {
-      GRASS_LEFT: 0,
-      GRASS_MID: 1,
-      GRASS_RIGHT: 2,
-      GRASS_SINGLE: 3,
-      GRASS_CORNER: 4,
-      FILL: 5,
-      SLOPE_LEFT: 6,
-      SMALL_BLOCK: 7,
-      PLATFORM_LEGS: 8,
-      PLATFORM_LEGS_ALT: 9,
-      PLATFORM_RIGHT: 10,
-      BUSH: 11,
-      BUSH_ALT: 12,
-      GRASS_BLOCK: 13,
-      WATER: 14,
-      WATER_ALT: 15,
-      FLAG: 16
-    };
-
-    const hud = {
-      level: document.getElementById('levelText'),
-      score: document.getElementById('scoreText'),
-      lives: document.getElementById('livesText'),
-      highScore: document.getElementById('highScoreText'),
-      gems: document.getElementById('gemsText'),
-      collectFill: document.getElementById('collectFill')
-    };
-
-    const startOverlay = document.getElementById('startOverlay');
-    const messageOverlay = document.getElementById('messageOverlay');
-    const messageTitle = document.getElementById('messageTitle');
-    const messageBody = document.getElementById('messageBody');
-    const startBtn = document.getElementById('startBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const statusLine = document.getElementById('statusLine');
-
-    const img = {};
-    const imageFiles = {
-      back: 'back.png',
-      far: 'far.png',
-      middle: 'middle.png',
-      tiles: 'tiles.png',
-      diamond: 'diamond.png',
-      gem: 'gem.png',
-      gem2: 'gem_2.png',
-      gem3: 'gem_3.png',
-      unicorn: 'margot_unicorn_run.png',
-      btnLeft: 'btn_left.png',
-      btnRight: 'btn_right.png',
-      btnJump: 'btn_jump.png'
-    };
-
-    const optionalImageKeys = new Set(['diamond', 'gem', 'gem2', 'gem3', 'btnLeft', 'btnRight', 'btnJump']);
-    const sparkleParticles = [];
-    const dustParticles = [];
-
-    let audioCtx = null;
-    let assetsLoaded = false;
-    let loadingFailed = false;
-    let manualPause = false;
-
-    function setStatus(message, isError = false) {
-      statusLine.textContent = message;
-      statusLine.classList.toggle('error', isError);
-    }
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    function clamp(v, min, max) {
-      return Math.max(min, Math.min(max, v));
-    }
-
-    function lerp(a, b, t) {
-      return a + (b - a) * t;
-    }
-
-    function makeRng(seed) {
-      let s = seed >>> 0;
-      return function() {
-        s = (s * 1664525 + 1013904223) >>> 0;
-        return s / 4294967296;
-      };
-    }
-
-    function assert(condition, message) {
-      if (!condition) throw new Error(message);
-    }
-
-    function runSelfTests() {
-      assert(TILE >= 32, 'Tile size invalid');
-      assert(clamp(-1, 0, 5) === 0, 'Clamp low failed');
-      assert(clamp(8, 0, 5) === 5, 'Clamp high failed');
-      assert(clamp(3, 0, 5) === 3, 'Clamp middle failed');
-      const a = makeRng(5);
-      const b = makeRng(5);
-      assert(a() === b(), 'Seeded RNG must be deterministic');
-      assert(['tiles', 'unicorn', 'back', 'far', 'middle'].every((key) => key in imageFiles), 'Missing required assets');
-    }
-
-    function getImage(key) {
-      return img[key] || null;
-    }
-
-    function loadImages() {
-      const entries = Object.entries(imageFiles);
-      return Promise.all(entries.map(([key, src]) => new Promise((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => {
-          img[key] = image;
-          resolve({ key, ok: true });
-        };
-        image.onerror = () => {
-          if (optionalImageKeys.has(key)) {
-            console.warn('Optional asset missing:', src);
-            resolve({ key, ok: false });
-            return;
-          }
-          reject(new Error(`Could not load ${src}`));
-        };
-        image.src = src;
-      })));
-    }
-
-    function getHighScore() {
-      try {
-        return Number(localStorage.getItem(HIGH_SCORE_KEY) || 0);
-      } catch {
-        return 0;
-      }
-    }
-
-    function saveHighScore(score) {
-      const current = getHighScore();
-      if (score <= current) return current;
-      try {
-        localStorage.setItem(HIGH_SCORE_KEY, String(score));
-      } catch {}
-      return score;
-    }
-
-    function initAudio() {
-      if (audioCtx) return;
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      audioCtx = new Ctx();
-    }
-
-    function beep(freq, duration, type = 'square', volume = 0.03, rampTo = null) {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      if (rampTo) osc.frequency.linearRampToValueAtTime(rampTo, audioCtx.currentTime + duration);
-      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + duration);
-    }
-
-    function playJumpSound() { beep(520, 0.12, 'square', 0.035, 700); }
-    function playGemSound() { beep(880, 0.07, 'triangle', 0.035, 1200); }
-    function playGoalSound() { beep(660, 0.12, 'square', 0.04, 990); setTimeout(() => beep(990, 0.16, 'square', 0.04, 1320), 70); }
-    function playHitSound() { beep(210, 0.18, 'sawtooth', 0.04, 110); }
-
-    const keys = {
-      left: false,
-      right: false,
-      jump: false,
-      jumpPressed: false,
-      pausePressed: false
-    };
-
-    function mapKey(code, isDown) {
-      if (code === 'ArrowLeft' || code === 'KeyA') keys.left = isDown;
-      if (code === 'ArrowRight' || code === 'KeyD') keys.right = isDown;
-      if (code === 'ArrowUp' || code === 'KeyW' || code === 'Space') {
-        if (isDown && !keys.jump) keys.jumpPressed = true;
-        keys.jump = isDown;
-      }
-      if (code === 'KeyP' && isDown) keys.pausePressed = true;
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space'].includes(e.code)) e.preventDefault();
-      mapKey(e.code, true);
-    });
-    window.addEventListener('keyup', (e) => mapKey(e.code, false));
-
-    document.querySelectorAll('.touchBtn').forEach((btn) => {
-      const key = btn.dataset.key;
-      const press = (down) => {
-        if (key === 'left') keys.left = down;
-        if (key === 'right') keys.right = down;
-        if (key === 'jump') {
-          if (down && !keys.jump) keys.jumpPressed = true;
-          keys.jump = down;
-        }
-      };
-      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); press(true); });
-      btn.addEventListener('pointerup', (e) => { e.preventDefault(); press(false); });
-      btn.addEventListener('pointercancel', () => press(false));
-      btn.addEventListener('pointerleave', () => press(false));
-    });
-
-    function getTileRect(id) {
-      const sheet = getImage('tiles');
-      const cols = TILE_COLUMNS;
-      return {
-        sx: (id % cols) * TILE,
-        sy: Math.floor(id / cols) * TILE,
-        sw: TILE,
-        sh: TILE
-      };
-    }
-
-    function drawTile(id, dx, dy, dw = TILE, dh = TILE) {
-      const sheet = getImage('tiles');
-      if (!sheet) return;
-      const tr = getTileRect(id);
-      ctx.drawImage(sheet, tr.sx, tr.sy, tr.sw, tr.sh, dx, dy, dw, dh);
-    }
-
-    function tileAt(level, tx, ty) {
-      if (tx < 0 || ty < 0 || tx >= level.width || ty >= level.height) return 0;
-      return level.map[ty][tx];
-    }
-
-    function rectVsLevel(level, x, y, w, h) {
-      const left = Math.floor(x / TILE);
-      const right = Math.floor((x + w - 1) / TILE);
-      const top = Math.floor(y / TILE);
-      const bottom = Math.floor((y + h - 1) / TILE);
-      for (let ty = top; ty <= bottom; ty++) {
-        for (let tx = left; tx <= right; tx++) {
-          if (tileAt(level, tx, ty)) return true;
-        }
-      }
-      return false;
-    }
-
-    function findSurfaceY(level, x) {
-      for (let y = 0; y < level.height; y++) {
-        if (level.map[y][x]) return y;
-      }
-      return -1;
-    }
-
-    function buildLevel(levelNumber) {
-      const rng = makeRng(SEED_BASE + levelNumber * 999);
-      const width = 72 + levelNumber * 8;
-      const height = WORLD_HEIGHT_TILES;
-      const map = Array.from({ length: height }, () => Array(width).fill(0));
-      const surface = new Array(width).fill(11);
-
-      let ground = 11;
-      for (let x = 0; x < width; x++) {
-        if (rng() < 0.15) ground += rng() < 0.5 ? -1 : 1;
-        ground = clamp(ground, 9, 12);
-        surface[x] = ground;
-      }
-
-      const pitCount = 2 + Math.floor(levelNumber / 3);
-      for (let i = 0; i < pitCount; i++) {
-        const start = 12 + Math.floor(rng() * (width - 24));
-        const size = 1 + Math.floor(rng() * 2);
-        for (let j = 0; j < size; j++) surface[start + j] = -1;
-      }
-
-      let x = 2;
-      let currentY = surface[2] > 0 ? surface[2] : 11;
-      while (x < width - 6) {
-        const segmentLen = 5 + Math.floor(rng() * 8);
-        const nextY = clamp(currentY + (rng() < 0.35 ? (rng() < 0.5 ? -1 : 1) : 0), 9, 12);
-        for (let sx = x; sx < Math.min(width - 4, x + segmentLen); sx++) {
-          if (surface[sx] < 0) continue;
-          surface[sx] = nextY;
-        }
-        const gapChance = x > 10 && x < width - 18 ? 0.20 : 0.06;
-        if (rng() < gapChance) {
-          const gapWidth = 1 + Math.floor(rng() * 2);
-          const gapStart = Math.min(width - 8, x + segmentLen);
-          for (let gx = gapStart; gx < gapStart + gapWidth; gx++) surface[gx] = -1;
-          x = gapStart + gapWidth;
-        } else {
-          x += segmentLen;
-        }
-        currentY = nextY;
-      }
-
-      for (let cx = 1; cx < width - 1; cx++) {
-        if (surface[cx] < 0 || surface[cx - 1] < 0 || surface[cx + 1] < 0) continue;
-        const target = Math.round((surface[cx - 1] + surface[cx + 1]) / 2);
-        if (Math.abs(surface[cx] - target) > 1) surface[cx] = target;
-      }
-
-      for (let tx = 0; tx < width; tx++) {
-        if (surface[tx] < 0) continue;
-        const topY = surface[tx];
-        const leftGap = tx === 0 || surface[tx - 1] < 0;
-        const rightGap = tx === width - 1 || surface[tx + 1] < 0;
-        for (let ty = topY; ty < height; ty++) {
-          if (ty === topY) {
-            if (leftGap && rightGap) map[ty][tx] = TILE_ID.GRASS_SINGLE;
-            else if (leftGap) map[ty][tx] = TILE_ID.GRASS_LEFT;
-            else if (rightGap) map[ty][tx] = TILE_ID.GRASS_RIGHT;
-            else map[ty][tx] = TILE_ID.GRASS_MID;
-          } else {
-            map[ty][tx] = TILE_ID.FILL;
-          }
-        }
-      }
-
-      const platformCount = 6 + levelNumber;
-      for (let i = 0; i < platformCount; i++) {
-        const pw = 2 + Math.floor(rng() * 3);
-        const px = 8 + Math.floor(rng() * (width - pw - 16));
-        let baseY = surface[px];
-        if (baseY < 0) baseY = 11;
-        const py = clamp(baseY - (2 + Math.floor(rng() * 2)), 5, 9);
-        for (let j = 0; j < pw; j++) {
-          map[py][px + j] = (j === 0) ? TILE_ID.GRASS_LEFT : (j === pw - 1 ? TILE_ID.GRASS_RIGHT : TILE_ID.GRASS_MID);
-        }
-      }
-
-      const decorations = [];
-      for (let tx = 2; tx < width - 2; tx++) {
-        const topY = findSurfaceY({ map, width, height }, tx);
-        if (topY <= 0 || tileAt({ map, width, height }, tx, topY - 1)) continue;
-        if (rng() < 0.08) {
-          decorations.push({
-            tile: rng() < 0.5 ? TILE_ID.BUSH : TILE_ID.BUSH_ALT,
-            x: tx * TILE,
-            y: topY * TILE - TILE,
-            sway: rng() * Math.PI * 2
-          });
-        }
-      }
-
-      const gems = [];
-      for (let tx = 5; tx < width - 5; tx++) {
-        const topY = findSurfaceY({ map, width, height }, tx);
-        if (topY <= 0 || tileAt({ map, width, height }, tx, topY - 1)) continue;
-        const nearGap = !tileAt({ map, width, height }, tx - 1, topY) || !tileAt({ map, width, height }, tx + 1, topY);
-        if (rng() < (nearGap ? 0.28 : 0.12)) {
-          const typePool = ['diamond', 'gem', 'gem2', 'gem3'];
-          gems.push({
-            x: tx * TILE + 12,
-            y: topY * TILE - (34 + Math.floor(rng() * 26)),
-            w: 22,
-            h: 22,
-            bob: rng() * Math.PI * 2,
-            sparkle: rng() * Math.PI * 2,
-            type: typePool[Math.floor(rng() * typePool.length)],
-            collected: false
-          });
-        }
-      }
-
-      const goalColumn = width - 4;
-      let goalSurface = findSurfaceY({ map, width, height }, goalColumn);
-      if (goalSurface < 0) {
-        goalSurface = 11;
-        for (let ty = goalSurface; ty < height; ty++) map[ty][goalColumn] = ty === goalSurface ? TILE_ID.GRASS_SINGLE : TILE_ID.FILL;
-      }
-
-      return {
-        width,
-        height,
-        map,
-        decorations,
-        gems,
-        goal: { x: goalColumn * TILE, y: Math.max(3, goalSurface - 2) * TILE, w: 24, h: TILE * 2 },
-        waterPits: surface.map((v, i) => v < 0 ? i : -1).filter((v) => v >= 0)
-      };
-    }
-
-    const player = {
-      x: 0,
-      y: 0,
-      w: 60,
-      h: 52,
-      vx: 0,
-      vy: 0,
-      onGround: false,
-      facing: 1,
-      animTime: 0,
-      frame: 0,
-      visualX: 0,
-      visualY: 0,
-      wasOnGround: false
-    };
-
-    const game = {
-      running: false,
-      paused: false,
-      levelIndex: 0,
-      level: null,
-      cameraX: 0,
-      cameraVisualX: 0,
-      score: 0,
-      lives: 3,
-      totalCollected: 0,
-      levelCollected: 0,
-      levelTotal: 0,
-      highScore: getHighScore()
-    };
-
-    function updateHud() {
-      hud.level.textContent = `Level ${game.levelIndex + 1} / ${LEVEL_COUNT}`;
-      hud.score.textContent = `Score: ${game.score}`;
-      hud.lives.textContent = `Lives: ${game.lives}`;
-      hud.highScore.textContent = `High Score: ${game.highScore}`;
-      hud.gems.textContent = `Gems: ${game.levelCollected} / ${game.levelTotal}`;
-      hud.collectFill.style.width = `${game.levelTotal ? (game.levelCollected / game.levelTotal) * 100 : 0}%`;
-    }
-
-    function spawnSparkles(x, y, count = 7) {
-      for (let i = 0; i < count; i++) {
-        const angle = (Math.PI * 2 * i) / count;
-        const life = 0.45 + Math.random() * 0.2;
-        sparkleParticles.push({
-          x,
-          y,
-          vx: Math.cos(angle) * (40 + Math.random() * 40),
-          vy: Math.sin(angle) * (40 + Math.random() * 40) - 20,
-          life,
-          maxLife: life,
-          size: 2 + Math.random() * 2
-        });
-      }
-    }
-
-    function spawnDust(x, y) {
-      for (let i = 0; i < 4; i++) {
-        const life = 0.22 + Math.random() * 0.12;
-        dustParticles.push({
-          x: x + Math.random() * 10 - 5,
-          y: y + Math.random() * 4,
-          vx: Math.random() * 30 - 15,
-          vy: -20 - Math.random() * 25,
-          life,
-          maxLife: life,
-          size: 4 + Math.random() * 3
-        });
-      }
-    }
-
-    function resetPlayer() {
-      player.x = 3 * TILE;
-      player.y = 6 * TILE;
-      player.visualX = player.x;
-      player.visualY = player.y;
-      player.vx = 0;
-      player.vy = 0;
-      player.onGround = false;
-      player.wasOnGround = false;
-      player.animTime = 0;
-      player.frame = 0;
-      game.cameraX = 0;
-      game.cameraVisualX = 0;
-    }
-
-    function startLevel(index) {
-      game.levelIndex = index;
-      game.level = buildLevel(index + 1);
-      game.levelCollected = 0;
-      game.levelTotal = game.level.gems.length;
-      sparkleParticles.length = 0;
-      dustParticles.length = 0;
-      resetPlayer();
-      hideMessage();
-      updateHud();
-    }
-
-    function startGame() {
-      if (!assetsLoaded || loadingFailed) return;
-      initAudio();
-      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-      game.running = true;
-      game.paused = false;
-      manualPause = false;
-      game.score = 0;
-      game.lives = 3;
-      game.totalCollected = 0;
-      startOverlay.classList.add('hidden');
-      startLevel(0);
-    }
-
-    function showMessage(title, body, isRestart = false) {
-      game.paused = true;
-      messageTitle.textContent = title;
-      messageBody.textContent = body;
-      messageOverlay.classList.remove('hidden');
-      nextBtn.classList.toggle('hidden', isRestart);
-      restartBtn.classList.toggle('hidden', !isRestart);
-    }
-
-    function hideMessage() {
-      messageOverlay.classList.add('hidden');
-      game.paused = manualPause;
-    }
-
-    function finishRun() {
-      game.highScore = saveHighScore(game.score);
-      updateHud();
-    }
-
-    function loseLife() {
-      playHitSound();
-      game.lives -= 1;
-      updateHud();
-      if (game.lives <= 0) {
-        finishRun();
-        showMessage('Game Over', `You reached level ${game.levelIndex + 1} with a score of ${game.score}.`, true);
-      } else {
-        resetPlayer();
-      }
-    }
-
-    function collectGem(gem, gx, gy) {
-      gem.collected = true;
-      game.levelCollected += 1;
-      game.totalCollected += 1;
-      game.score += gem.type === 'diamond' ? 40 : gem.type === 'gem3' ? 35 : gem.type === 'gem2' ? 30 : 25;
-      spawnSparkles(gx + 11, gy + 11, 8);
-      playGemSound();
-      if (game.score > game.highScore) game.highScore = saveHighScore(game.score);
-      updateHud();
-    }
-
-    function checkGoal() {
-      const goal = game.level.goal;
-      const overlap = player.x + player.w > goal.x && player.x < goal.x + goal.w + 30 && player.y + player.h > goal.y && player.y < goal.y + goal.h + 20;
-      if (!overlap) return;
-      playGoalSound();
-      game.score += 250 + game.levelCollected * 25;
-      if (game.score > game.highScore) game.highScore = saveHighScore(game.score);
-      updateHud();
-      if (game.levelIndex >= LEVEL_COUNT - 1) {
-        finishRun();
-        showMessage('You Win', `All 10 levels are complete. Final score: ${game.score}.`, true);
-      } else {
-        showMessage('Level Complete', `Great job. You collected ${game.levelCollected} gems and are moving to level ${game.levelIndex + 2}.`, false);
-      }
-    }
-
-    function updateParticles(dt) {
-      for (let i = sparkleParticles.length - 1; i >= 0; i--) {
-        const p = sparkleParticles[i];
-        p.life -= dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 100 * dt;
-        if (p.life <= 0) sparkleParticles.splice(i, 1);
-      }
-      for (let i = dustParticles.length - 1; i >= 0; i--) {
-        const p = dustParticles[i];
-        p.life -= dt;
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vy += 70 * dt;
-        if (p.life <= 0) dustParticles.splice(i, 1);
-      }
-    }
-
-    function updatePlayer(dt, now) {
-      if (keys.pausePressed) {
-        keys.pausePressed = false;
-        if (messageOverlay.classList.contains('hidden')) {
-          manualPause = !manualPause;
-          game.paused = manualPause;
-        }
-      }
-      if (game.paused || !game.running || !game.level) return;
-
-      let move = 0;
-      if (keys.left) move -= 1;
-      if (keys.right) move += 1;
-
-      player.vx = move * MOVE_SPEED;
-      if (move !== 0) player.facing = move;
-
-      if (keys.jumpPressed && player.onGround) {
-        player.vy = -JUMP_POWER;
-        player.onGround = false;
-        playJumpSound();
-      }
-      keys.jumpPressed = false;
-
-      player.vy += GRAVITY * dt;
-      player.vy = Math.min(player.vy, MAX_FALL);
-
-      let nextX = player.x + player.vx * dt;
-      if (!rectVsLevel(game.level, nextX, player.y, player.w, player.h)) {
-        player.x = nextX;
-      } else {
-        const step = Math.sign(player.vx);
-        while (!rectVsLevel(game.level, player.x + step, player.y, player.w, player.h)) player.x += step;
-        player.vx = 0;
-      }
-
-      let nextY = player.y + player.vy * dt;
-      if (!rectVsLevel(game.level, player.x, nextY, player.w, player.h)) {
-        player.y = nextY;
-        player.onGround = false;
-      } else {
-        const step = Math.sign(player.vy);
-        while (!rectVsLevel(game.level, player.x, player.y + step, player.w, player.h)) player.y += step;
-        if (player.vy > 0) player.onGround = true;
-        player.vy = 0;
-      }
-
-      if (player.onGround && !player.wasOnGround) {
-        spawnDust(player.x + player.w * 0.5, player.y + player.h);
-      }
-      player.wasOnGround = player.onGround;
-
-      if (player.y > game.level.height * TILE + 220) {
-        loseLife();
-        return;
-      }
-
-      for (const gem of game.level.gems) {
-        if (gem.collected) continue;
-        const gy = gem.y + Math.sin(now * 0.004 + gem.bob) * 6;
-        if (player.x + player.w > gem.x && player.x < gem.x + gem.w && player.y + player.h > gy && player.y < gy + gem.h) {
-          collectGem(gem, gem.x, gy);
-        }
-      }
-
-      checkGoal();
-
-      if (!player.onGround) {
-        player.animTime += dt * 6;
-        player.frame = player.vy < 0 ? 13 : 14;
-      } else if (Math.abs(player.vx) > 1) {
-        player.animTime += dt * 13;
-        player.frame = Math.floor(player.animTime) % 12;
-      } else {
-        player.animTime = 0;
-        player.frame = 0;
-      }
-
-      const worldWidth = game.level.width * TILE;
-      game.cameraX = clamp(player.x - canvas.width * 0.34, 0, Math.max(0, worldWidth - canvas.width));
-      game.cameraVisualX = lerp(game.cameraVisualX, game.cameraX, Math.min(1, dt * 7));
-      player.visualX = lerp(player.visualX, player.x, Math.min(1, dt * 15));
-      player.visualY = lerp(player.visualY, player.y, Math.min(1, dt * 15));
-    }
-
-    function drawLayer(image, speed, heightRatio, yOffset = 0, sway = 0) {
-      if (!image) return;
-      const drawHeight = Math.round(canvas.height * heightRatio);
-      const scale = drawHeight / image.height;
-      const drawWidth = Math.round(image.width * scale);
-      const shift = -((game.cameraVisualX * speed) % drawWidth);
-      const bob = Math.sin(performance.now() * 0.0003 + sway) * 6;
-      for (let x = shift - drawWidth; x < canvas.width + drawWidth; x += drawWidth) {
-        ctx.drawImage(image, Math.round(x), Math.round(canvas.height - drawHeight + yOffset + bob), drawWidth, drawHeight);
-      }
-    }
-
-    function drawBackground() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-      gradient.addColorStop(0, '#a0d448');
-      gradient.addColorStop(0.35, '#8fc63e');
-      gradient.addColorStop(1, '#355126');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      drawLayer(getImage('back'), 0.05, 0.78, -24, 0.2);
-      drawLayer(getImage('far'), 0.12, 0.98, -14, 1.3);
-      drawLayer(getImage('middle'), 0.24, 1.18, 10, 2.1);
-    }
-
-    function drawLevel(now) {
-      const cam = game.cameraVisualX;
-      const startX = Math.max(0, Math.floor(cam / TILE) - 2);
-      const endX = Math.min(game.level.width, Math.ceil((cam + canvas.width) / TILE) + 2);
-
-      for (let y = 0; y < game.level.height; y++) {
-        for (let x = startX; x < endX; x++) {
-          const id = game.level.map[y][x];
-          if (!id) continue;
-          drawTile(id, Math.round(x * TILE - cam), Math.round(y * TILE), TILE + 1, TILE + 1);
-        }
-      }
-
-      for (const wx of game.level.waterPits) {
-        const dx = Math.round(wx * TILE - cam);
-        const dy = Math.round((WORLD_HEIGHT_TILES - 2) * TILE);
-        const waveId = Math.sin(now * 0.01 + wx) > 0 ? TILE_ID.WATER : TILE_ID.WATER_ALT;
-        drawTile(waveId, dx, dy, TILE + 1, TILE + 1);
-      }
-
-      for (const deco of game.level.decorations) {
-        const dx = Math.round(deco.x - cam + Math.sin(now * 0.001 + deco.sway) * 1.2);
-        if (dx < -TILE || dx > canvas.width + TILE) continue;
-        drawTile(deco.tile, dx, Math.round(deco.y), TILE, TILE);
-      }
-    }
-
-    function drawGemSprite(sprite, x, y, scale = 24) {
-      if (sprite) {
-        ctx.drawImage(sprite, 0, 0, sprite.width, sprite.height, x, y, scale, scale);
-      } else {
-        ctx.fillStyle = '#d6fff3';
-        ctx.fillRect(x + 4, y + 2, 12, 12);
-      }
-    }
-
-    function drawCollectibles(now) {
-      for (const gem of game.level.gems) {
-        if (gem.collected) continue;
-        const x = Math.round(gem.x - game.cameraVisualX);
-        if (x < -40 || x > canvas.width + 40) continue;
-        const y = Math.round(gem.y + Math.sin(now * 0.004 + gem.bob) * 6);
-        const spriteMap = { diamond: getImage('diamond'), gem: getImage('gem'), gem2: getImage('gem2'), gem3: getImage('gem3') };
-        drawGemSprite(spriteMap[gem.type], x, y, 24);
-
-        const sparkleScale = 0.5 + 0.7 * (0.5 + 0.5 * Math.sin(now * 0.012 + gem.sparkle));
-        ctx.save();
-        ctx.globalAlpha = 0.45 + sparkleScale * 0.45;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x + 12, y - 4 * sparkleScale);
-        ctx.lineTo(x + 12, y + 4 * sparkleScale);
-        ctx.moveTo(x + 6 * sparkleScale, y + 12);
-        ctx.lineTo(x + 18 * sparkleScale, y + 12);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      for (const p of sparkleParticles) {
-        const alpha = Math.max(0, p.life / p.maxLife);
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(Math.round(p.x - game.cameraVisualX), Math.round(p.y), p.size + 1, p.size + 1);
-        ctx.restore();
-      }
-
-      for (const p of dustParticles) {
-        const alpha = Math.max(0, p.life / p.maxLife);
-        ctx.save();
-        ctx.globalAlpha = alpha * 0.7;
-        ctx.fillStyle = '#e7d09e';
-        ctx.fillRect(Math.round(p.x - game.cameraVisualX), Math.round(p.y), p.size, p.size * 0.6);
-        ctx.restore();
-      }
-    }
-
-    function drawGoal(now) {
-      const g = game.level.goal;
-      const poleX = Math.round(g.x - game.cameraVisualX + 12);
-      const topY = g.y + 4;
-      ctx.fillStyle = '#e9ff8f';
-      ctx.fillRect(poleX, topY, 6, g.h + 12);
-      const wave = Math.sin(now * 0.012) * 5;
-      if (getImage('tiles')) {
-        drawTile(TILE_ID.FLAG, poleX + 6, topY + 6 + wave, TILE, TILE);
-      } else {
-        ctx.fillStyle = '#fff4bd';
-        ctx.beginPath();
-        ctx.moveTo(poleX + 6, topY + 8);
-        ctx.lineTo(poleX + 42 + wave, topY + 18);
-        ctx.lineTo(poleX + 6, topY + 30);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.fillStyle = '#d9ff63';
-      ctx.fillRect(poleX - 8, topY + g.h + 8, 22, 6);
-    }
-
-    function drawPlayer() {
-      const sheet = getImage('unicorn');
-      if (!sheet) return;
-      const cols = 6;
-      const rows = 6;
-      const frameW = Math.floor(sheet.width / cols);
-      const frameH = Math.floor(sheet.height / rows);
-      const safeFrame = clamp(player.frame, 0, cols * rows - 1);
-      const row = Math.floor(safeFrame / cols);
-      const col = safeFrame % cols;
-      const drawX = Math.round(player.visualX - game.cameraVisualX - 18);
-      const drawY = Math.round(player.visualY - 44);
-      ctx.save();
-      if (player.facing < 0) {
-        ctx.translate(drawX + 60, 0);
-        ctx.scale(-1, 1);
-        ctx.translate(-(drawX + 60), 0);
-      }
-      ctx.drawImage(sheet, col * frameW, row * frameH, frameW, frameH, drawX, drawY, 120, 120);
-      ctx.restore();
-    }
-
-    function drawPauseOverlay() {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 38px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
-      ctx.restore();
-    }
-
-    startBtn.addEventListener('click', startGame);
-    nextBtn.addEventListener('click', () => {
-      if (game.levelIndex < LEVEL_COUNT - 1) startLevel(game.levelIndex + 1);
-    });
-    restartBtn.addEventListener('click', startGame);
-
-    let last = 0;
-    function loop(now) {
-      const dt = Math.min(0.033, (now - last) / 1000 || 0);
-      last = now;
-      if (game.running && game.level) {
-        updatePlayer(dt, now);
-        updateParticles(dt);
-        drawBackground();
-        drawLevel(now);
-        drawCollectibles(now);
-        drawGoal(now);
-        drawPlayer();
-        if (game.paused && messageOverlay.classList.contains('hidden')) drawPauseOverlay();
-      }
-      requestAnimationFrame(loop);
-    }
-
-    runSelfTests();
-    loadImages()
-      .then(() => {
-        assetsLoaded = true;
-        startBtn.disabled = false;
-        startBtn.textContent = 'Start Game';
-        setStatus('Assets ready. Press Start Game.');
-        updateHud();
-        requestAnimationFrame(loop);
-      })
-      .catch((err) => {
-        loadingFailed = true;
-        startBtn.disabled = true;
-        startBtn.textContent = 'Assets Missing';
-        setStatus(err.message + ' Make sure every required file is in the same folder as index.html.', true);
-        console.error(err);
-      });
-  </script>
+
+<canvas id="game"></canvas>
+
+<script>
+
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
+
+canvas.width=window.innerWidth
+canvas.height=window.innerHeight
+
+const TILE=64
+
+const STATE={
+TITLE:0,
+PLAY:1,
+PAUSE:2,
+GAMEOVER:3
+}
+
+let state=STATE.TITLE
+
+let cameraX=0
+
+let score=0
+let gems=0
+let lives=3
+
+let highScore=localStorage.getItem("unicornScore")||0
+
+function saveScore(){
+localStorage.setItem("unicornScore",score)
+}
+
+function sound(freq){
+
+let ac=new AudioContext()
+let o=ac.createOscillator()
+let g=ac.createGain()
+
+o.connect(g)
+g.connect(ac.destination)
+
+o.frequency.value=freq
+o.start()
+
+g.gain.exponentialRampToValueAtTime(
+0.0001,
+ac.currentTime+0.15
+)
+
+}
+
+const unicorn=new Image()
+unicorn.src="margot_unicorn_run.png"
+
+const tiles=new Image()
+tiles.src="tiles.png"
+
+const back=new Image()
+back.src="forest_back.png"
+
+const mid=new Image()
+mid.src="forest_mid.png"
+
+const front=new Image()
+front.src="forest_front.png"
+
+let player={
+x:200,
+y:300,
+vx:0,
+vy:0,
+w:80,
+h:80,
+frame:0
+}
+
+let gravity=0.6
+
+const keys={}
+
+document.addEventListener("keydown",e=>{
+
+keys[e.key]=true
+
+if(e.key==="Escape")togglePause()
+
+})
+
+document.addEventListener("keyup",e=>{
+
+keys[e.key]=false
+
+})
+
+function togglePause(){
+
+if(state===STATE.PLAY)state=STATE.PAUSE
+else if(state===STATE.PAUSE)state=STATE.PLAY
+
+}
+
+canvas.addEventListener("click",()=>{
+
+if(state===STATE.TITLE){
+
+state=STATE.PLAY
+sound(800)
+
+}
+
+})
+
+let terrain=[]
+
+function generateTerrain(){
+
+terrain=[]
+
+for(let i=0;i<300;i++){
+
+let height=450+Math.sin(i*0.4)*40
+
+terrain.push(height)
+
+}
+
+}
+
+generateTerrain()
+
+let gemsList=[]
+
+for(let i=5;i<300;i+=12){
+
+gemsList.push({
+x:i*TILE,
+y:300,
+spark:Math.random()*10,
+collected:false
+})
+
+}
+
+let enemies=[]
+
+for(let i=10;i<300;i+=20){
+
+enemies.push({
+x:i*TILE,
+y:420,
+dir:1
+})
+
+}
+
+function update(){
+
+if(state!==STATE.PLAY)return
+
+if(keys["ArrowRight"])player.vx=6
+else if(keys["ArrowLeft"])player.vx=-6
+else player.vx=0
+
+if(keys["ArrowUp"]&&player.vy===0){
+
+player.vy=-14
+sound(900)
+
+}
+
+player.vy+=gravity
+
+player.x+=player.vx
+player.y+=player.vy
+
+let ground=terrain[Math.floor(player.x/TILE)]
+
+if(player.y>ground){
+
+player.y=ground
+player.vy=0
+
+}
+
+cameraX=player.x-200
+
+score=Math.floor(player.x)
+
+if(score>highScore){
+highScore=score
+saveScore()
+}
+
+for(let g of gemsList){
+
+if(!g.collected){
+
+if(Math.abs(player.x-g.x)<50){
+
+g.collected=true
+gems++
+score+=200
+sound(1200)
+
+}
+
+}
+
+}
+
+for(let e of enemies){
+
+e.x+=e.dir*2
+
+if(Math.abs(player.x-e.x)<40){
+
+lives--
+sound(200)
+
+if(lives<=0){
+state=STATE.GAMEOVER
+}
+
+}
+
+}
+
+}
+
+function drawParallax(){
+
+ctx.drawImage(back,-cameraX*0.2,0)
+ctx.drawImage(mid,-cameraX*0.4,0)
+ctx.drawImage(front,-cameraX*0.6,0)
+
+}
+
+function drawGround(){
+
+for(let i=0;i<terrain.length;i++){
+
+ctx.drawImage(
+tiles,
+0,0,64,64,
+i*TILE-cameraX,
+terrain[i]+TILE,
+64,64
+)
+
+}
+
+}
+
+function drawPlayer(){
+
+ctx.drawImage(
+unicorn,
+0,0,256,256,
+player.x-cameraX,
+player.y-80,
+120,
+120
+)
+
+}
+
+function drawGems(){
+
+for(let g of gemsList){
+
+if(!g.collected){
+
+let sparkle=Math.sin(g.spark+=0.1)*6
+
+ctx.fillStyle="#0ff"
+
+ctx.beginPath()
+
+ctx.arc(
+g.x-cameraX,
+g.y+sparkle,
+8,
+0,
+Math.PI*2
+)
+
+ctx.fill()
+
+}
+
+}
+
+}
+
+function drawEnemies(){
+
+ctx.fillStyle="purple"
+
+for(let e of enemies){
+
+ctx.fillRect(
+e.x-cameraX,
+e.y,
+40,
+40
+)
+
+}
+
+}
+
+function drawHUD(){
+
+ctx.fillStyle="black"
+ctx.fillRect(20,20,240,120)
+
+ctx.fillStyle="white"
+ctx.font="20px monospace"
+
+ctx.fillText("Score:"+score,40,50)
+ctx.fillText("Gems:"+gems,40,80)
+ctx.fillText("Lives:"+lives,40,110)
+
+}
+
+function drawTitle(){
+
+ctx.fillStyle="black"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.fillStyle="white"
+ctx.font="60px monospace"
+ctx.textAlign="center"
+
+ctx.fillText(
+"Margot's Unicorn Quest",
+canvas.width/2,
+canvas.height/2-60
+)
+
+ctx.font="30px monospace"
+
+ctx.fillText(
+"Click To Start",
+canvas.width/2,
+canvas.height/2+40
+)
+
+}
+
+function drawGameOver(){
+
+ctx.fillStyle="black"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.fillStyle="white"
+
+ctx.font="50px monospace"
+ctx.textAlign="center"
+
+ctx.fillText(
+"Game Over",
+canvas.width/2,
+canvas.height/2
+)
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+
+if(state===STATE.TITLE){
+drawTitle()
+return
+}
+
+drawParallax()
+
+drawGround()
+
+drawGems()
+
+drawEnemies()
+
+drawPlayer()
+
+drawHUD()
+
+if(state===STATE.PAUSE){
+
+ctx.fillStyle="rgba(0,0,0,0.6)"
+ctx.fillRect(0,0,canvas.width,canvas.height)
+
+ctx.fillStyle="white"
+ctx.font="40px monospace"
+
+ctx.fillText("Paused",canvas.width/2,canvas.height/2)
+
+}
+
+if(state===STATE.GAMEOVER){
+drawGameOver()
+}
+
+}
+
+function loop(){
+
+update()
+draw()
+
+requestAnimationFrame(loop)
+
+}
+
+loop()
+
+</script>
+
 </body>
 </html>
